@@ -10,7 +10,6 @@ public class MainActivity extends AppCompatActivity {
 
     private final static String ORDER_KEY = "MainActivity.order";
 
-    private final static int MAX_ORDER = 9;
     private int order = 1;
 
     private TextView orderView;
@@ -39,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
         incButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                assertTrue(order < MAX_ORDER, "A room to increment order should exist");
+                assertTrue(order < HilbertView.MAX_ORDER, "A room to increment order should exist");
                 order++;
                 display();
             }
@@ -66,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         orderView.setText(getString(R.string.order_view_format, order));
         hilbertView.setOrder(order);
         decButton.setEnabled(order > 1);
-        incButton.setEnabled(order < MAX_ORDER);
+        incButton.setEnabled(order < HilbertView.MAX_ORDER);
     }
 
     public static void assertTrue(boolean f, String message) {

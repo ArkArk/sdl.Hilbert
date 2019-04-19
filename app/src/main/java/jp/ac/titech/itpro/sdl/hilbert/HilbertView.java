@@ -1,26 +1,28 @@
 package jp.ac.titech.itpro.sdl.hilbert;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
 public class HilbertView extends View {
 
-    private Paint paint = new Paint();
-
-    private Canvas canvas;
+    public final static int MAX_ORDER = 9;
 
     private int order = 1;
+    private List<Future<Bitmap>> bitmapFutures;
 
-    private HilbertTurtle turtle = new HilbertTurtle(new Turtle.Drawer() {
-        @Override
-        public void drawLine(double x0, double y0, double x1, double y1) {
-            canvas.drawLine((float) x0, (float) y0, (float) x1, (float) y1, paint);
-        }
-    });
+    private final ExecutorService exec = Executors.newCachedThreadPool();
+    private final Paint paint = new Paint();
 
     public HilbertView(Context context) {
         this(context, null);
@@ -34,23 +36,36 @@ public class HilbertView extends View {
         super(context, attrs, defStyleAttr);
     }
 
+    private void init() {
+        ExecutorService exec = Executors.newCachedThreadPool();
+        bitmapFutures = new ArrayList<>(MAX_ORDER + 1);
+        bitmapFutures.add(null); // index: 0
+        for (int i=1; i<MAX_ORDER + 1; i++) {
+            bitmapFutures.add(exec.submit(new BitmapCallable(getMeasuredWidth(), getMeasuredHeight(), i)));
+        }
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        this.canvas = canvas;
+        try {
+            Bitmap bitmap = bitmapFutures.get(order).get();
+            canvas.drawBitmap(bitmap, 0, 0, paint);
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
-        int w = canvas.getWidth();
-        int h = canvas.getHeight();
-        paint.setColor(Color.DKGRAY);
-        canvas.drawRect(0, 0, w, h, paint);
-
-        paint.setColor(Color.WHITE);
-        paint.setStrokeWidth(3);
-        int size = Math.min(w, h);
-        double step = (double) size / (1 << order);
-        turtle.setPos((w - size + step) / 2, (h + size - step) / 2);
-        turtle.setDir(HilbertTurtle.E);
-        turtle.draw(order, step, HilbertTurtle.R);
+    @Override
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        bitmapFutures = new ArrayList<>(MAX_ORDER + 1);
+        bitmapFutures.add(null); // index: 0
+        for (int i=1; i<MAX_ORDER + 1; i++) {
+            bitmapFutures.add(exec.submit(new BitmapCallable(getMeasuredWidth(), getMeasuredHeight(), i)));
+        }
     }
 
     public void setOrder(int n) {
